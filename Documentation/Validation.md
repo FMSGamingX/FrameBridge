@@ -41,3 +41,9 @@ For live session timings and display restoration, see the [secondary-monitor tes
 ## Reproduction
 
 Run the commands in [Build.md](Build.md). The development fixtures and logs are under **Tests/results**. The final verification includes **final-auto.txt**, **ui-test.txt**, and local dashboard and performance screenshots. Source pixels from the webcam and desktop tests are processed in memory.
+
+## Dedicated presenter · 20 November 2026
+
+On the secondary monitor, the 120-frame video fixture produced 239 acknowledged presentations including 119 generated midpoints in the NVIDIA Optical Flow run. An originals-only run produced 120 presentations and zero FrameBridge midpoints. A FrameBridge.Output.exe process was observed during streaming. Windowed and borderless output, Windows display-mode fullscreen and DXGI exclusive all presented frames. Windows reported 74.973 Hz for the selected display mode and 60 Hz in the exclusive test. The test harness restored the previous desktop mode.
+
+The driver-generated Smooth Motion result is unverified. NVIDIA App's installed MCP bridge exposed no per-program Smooth Motion control. The bundled PresentMon did not return frame-type samples. Windows denied the requested DXGI ETW trace at this account's current privilege level. To compare on/off, manually select the helper's profile, disable FrameBridge generation, restart processing for each driver setting and compare independently measured displayed frames on the same moving clip. App counters alone cannot detect extra frames inserted after Present. [NVIDIA App instructions](https://www.nvidia.com/en-us/geforce/news/gfecnt/20251/nvidia-app-update-dlss-overrides-and-more/)

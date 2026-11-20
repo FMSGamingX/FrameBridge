@@ -88,6 +88,7 @@ def capture_test(hwnd, config, nvidia=False):
 if __name__=="__main__":
     p=argparse.ArgumentParser()
     p.add_argument("--ai", action="store_true")
+    p.add_argument("--output-only", action="store_true",help="Play the file fixture with generation disabled for external presentation telemetry.")
     p.add_argument("--nvidia-flow", action="store_true")
     p.add_argument("--device", action="store_true")
     p.add_argument("--interpolate", action="store_true")
@@ -105,6 +106,13 @@ if __name__=="__main__":
     c=Config(0,1920,1080,-1,args.backend,1,1,int(args.interpolate),hz,1,rect.left,rect.top,320,180)
     c.hudAware=1
     try:
+        if args.output_only:
+            sample=root/"Tests"/"results"/"motion-30.avi"
+            if not sample.exists(): make(sample)
+            c.kind,c.generate=1,0
+            info=run(hwnd,c,str(sample),7)
+            assert info.state==3 and info.inputs==120 and info.generated==0
+            sys.exit(0)
         if args.nvidia_flow:
             c.generate=1
             run(hwnd,c,seconds=args.seconds,nvidia=True)

@@ -19,7 +19,9 @@ MF file / MF capture device / GDI desktop / synthetic clock
                        |
          scheduled midpoint, then current original
                        |
-                DXGI or GDI output
+                shared GPU texture or mapped CPU frame
+                       |
+          FrameBridge.Output.exe · D3D11 draw and DXGI Present
 ```
 
 **App** owns the WPF window, native child surface, output windows, per-user settings and telemetry. An x64 C ABI exposes inventory, session lifecycle, immutable statistics snapshots and a small input thumbnail for external output. UI updates run independently of frame presentation. Stop signals cancellation immediately, then joins the native workers off the WPF dispatcher so DXGI can finish window operations.
@@ -30,7 +32,7 @@ MF file / MF capture device / GDI desktop / synthetic clock
 
 **Engine/Interpolation** implements a coarse-to-fine symmetric block search in luma. The vector at each 16×16 midpoint tile points into the previous and next originals. Motion-compensated reconstruction averages the corresponding colors. A residual gate chooses an original on low-confidence matches. Fine motion, occlusions and tile edges can still produce artifacts.
 
-**Engine/GPU** implements the same midpoint model in two Direct3D compute passes. The second pass reads the vector field produced by the first. The presenter samples the selected original or generated texture using a fullscreen triangle in a letterboxed viewport. Four asynchronous GPU timestamp slots measure motion estimation and warping without waiting on the GPU. The CPU backend uses GDI for presentation. Optional AI uses DirectML or CPU inference and GDI presentation.
+**Engine/GPU** implements the same midpoint model in two Direct3D compute passes. The second pass reads the vector field produced by the first. The presenter samples the selected original or generated texture using a fullscreen triangle in a letterboxed viewport. Four asynchronous GPU timestamp slots measure motion estimation and warping without waiting on the GPU. CPU and optional AI return frames in host memory.
 
 **Engine/Rendering** enumerates monitor modes and chooses the requested renderer. The pacer uses source timestamps, display limits and measured preparation time. It can skip late midpoints. Two-frame buffering trades additional delay for tolerance of slow processing. Original frames are kept unmodified throughout generation. Overload can still cause a capture drop. Original and generated presentation counters are explicit.
 
@@ -43,3 +45,5 @@ MF file / MF capture device / GDI desktop / synthetic clock
 ## Development boundaries
 
 This release handles SDR video without audio. HDR passthrough, color-managed HDR presentation, DirectShow-only device drivers, console-network decoding, higher-than-2× ratios and automatic online updates remain separate work. Current output targets are source cadence or one midpoint per pair, subject to the detected refresh limit. The exclusive renderer can select a reported display resolution and refresh rate. Windowed and borderless output follow the Windows desktop mode. The application uses manual local builds for updates and never polls an online release channel.
+
+**Output process.** The main process owns capture, interpolation and UI window lifetime. FrameBridge.Output.exe owns a separate D3D11 device and immediate context, shaders, letterboxing, DXGI swapchain, fullscreen transition and Present. On hardware paths, the producer copies the scheduled texture once on the GPU into a same-adapter shared surface. A DXGI keyed mutex hands ownership to the presenter and back. Packed originals and BGRA originals have separate reusable slots. A session-specific file mapping and two events carry commands and acknowledgements. Only one presentation can be outstanding. Successful Present acknowledgements drive the application's counters. CPU and AI paths copy the finished host frame to a bounded shared mapping and upload it on the presenter. The presenter watches the producing process handle and exits on shutdown or producer exit. [DXGI keyed mutex](https://learn.microsoft.com/en-us/windows/win32/api/dxgi/nn-dxgi-idxgikeyedmutex)

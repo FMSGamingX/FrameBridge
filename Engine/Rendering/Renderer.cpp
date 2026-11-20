@@ -1,5 +1,6 @@
 // FrameBridge • Faris Alsari / FMSGaming • Famous Gaming
 #include "Renderer.hpp"
+#include "OutputClient.hpp"
 #include "../Interpolation/Flow.hpp"
 #include "../AI/Inference.hpp"
 namespace fb
@@ -8,10 +9,11 @@ struct Software final : Renderer
 {
     HWND hwnd;
     Config config;
+    OutputClient output;
     Frame mid;
     BlockFlow flow;
     std::unique_ptr<Inference> ai;
-    Software(HWND window, const Config &c) : hwnd(window), config(c) {}
+    Software(HWND window, const Config &c) : hwnd(window), config(c) { output.open(hwnd,c,-1); }
     void prepare(const Frame &a, const Frame &b, bool gen) override
     {
         if (!gen)
@@ -24,40 +26,12 @@ struct Software final : Renderer
     bool present(const Frame &original, bool midpoint) override
     {
         const Frame &f = midpoint ? mid : original;
-        RECT r{};
-        GetClientRect(hwnd, &r);
-        if (!IsWindowVisible(hwnd) || r.right <= 0 || r.bottom <= 0)
-            return false;
-        double scale = std::min(double(r.right) / f.width, double(r.bottom) / f.height);
-        int w = int(f.width * scale), h = int(f.height * scale), x = (r.right - w) / 2,
-            y = (r.bottom - h) / 2;
-        HDC dc = GetDC(hwnd);
-        if (!dc)
-            return false;
-        SetStretchBltMode(dc, COLORONCOLOR);
-        BITMAPINFO info{};
-        info.bmiHeader = {sizeof(BITMAPINFOHEADER), f.width, -f.height, 1, 32, BI_RGB};
-        if (x)
-        {
-            RECT left{0, 0, x, r.bottom}, right{x + w, 0, r.right, r.bottom};
-            FillRect(dc, &left, (HBRUSH)GetStockObject(BLACK_BRUSH));
-            FillRect(dc, &right, (HBRUSH)GetStockObject(BLACK_BRUSH));
-        }
-        if (y)
-        {
-            RECT top{0, 0, r.right, y}, bottom{0, y + h, r.right, r.bottom};
-            FillRect(dc, &top, (HBRUSH)GetStockObject(BLACK_BRUSH));
-            FillRect(dc, &bottom, (HBRUSH)GetStockObject(BLACK_BRUSH));
-        }
-        int rows = StretchDIBits(dc, x, y, w, h, 0, 0, f.width, f.height, f.pixels.data(), &info,
-                                 DIB_RGB_COLORS, SRCCOPY);
-        GdiFlush();
-        ReleaseDC(hwnd, dc);
-        return rows != 0 && rows != GDI_ERROR;
+
+        return output.pixels(f);
     }
     std::wstring name() const override
     {
-        return ai ? ai->name() : L"CPU · Windows GDI";
+        return ai ? ai->name() : L"CPU · Direct3D output";
     }
 };
 std::unique_ptr<Renderer> gpuRenderer(HWND hwnd, const Config &c, int index, bool nvidia);

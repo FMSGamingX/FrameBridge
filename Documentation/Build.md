@@ -17,7 +17,7 @@ From the **FrameBridge** directory in PowerShell:
 .\bin\FrameBridge.exe
 ```
 
-The compiler installer downloads the pinned maintainer release to the current user's LocalAppData, validates its published SHA-256 and extracts it there. An existing LLVM-MinGW clang++.exe can be supplied with `-Compiler`. The shader compiler uses the Windows Direct3D compiler. The optimized application loads compiled shader bytecode, so normal startup does not compile shaders. The local executable and native DLL travel together with **bin/Notices**. **bin/.build** contains development tools.
+The compiler installer downloads the pinned maintainer release to the current user's LocalAppData, validates its published SHA-256 and extracts it there. An existing LLVM-MinGW clang++.exe can be supplied with `-Compiler`. The shader compiler uses the Windows Direct3D compiler. The optimized application loads compiled shader bytecode, so normal startup does not compile shaders. FrameBridge.exe, FrameBridge.Output.exe and FrameBridge.Engine.dll travel together with **bin/Notices**. **bin/.build** contains development tools.
 
 The optional AI installation is described in [Models.md](Models.md).
 
@@ -41,3 +41,5 @@ The secondary suite temporarily selects the secondary monitor’s advertised 75 
 Use the numeric DXGI adapter index to compare specific GPUs. Negative one selects automatic discovery and negative two selects CPU. The sample generator produces a local uncompressed AVI with a predictable moving rectangle. Other formats depend on the Media Foundation decoders installed on the machine.
 
 Observed build environment on 19 November 2026: Windows 11 Pro 25H2, build 26200.9974, Ryzen 5 7600X (12 logical processors), with no registered dotnet SDK or usable MSVC desktop compiler found. NVIDIA's runtime driver and Windows' Direct3D interfaces were present. No standalone CUDA or Vulkan development kit was found in the inspected paths. LLVM-MinGW 20261117 (Clang 23.1.6) was installed per-user. [LLVM-MinGW release](https://github.com/mstorsjo/llvm-mingw/releases/tag/20261117)
+
+For the hardware-specific regression suite on the secondary 75 Hz display, run `py -3 Tests/secondary_suite.py` after building with `-Test`. For an originals-only video-file run with the same display guard, use `py -3 Tests/secondary_suite.py --presentation-only`. The suite restores the previous desktop mode on exit.

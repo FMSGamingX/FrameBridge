@@ -81,6 +81,9 @@ def run():
         if current.hz not in (74,75):
             raise RuntimeError(f"Requested 75 Hz, measured display configuration {current.hz}")
         print(f"{name.value} test mode: {current.width}x{current.height} at {current.hz} Hz",flush=True)
+        if '--presentation-only' in sys.argv:
+            subprocess.run([sys.executable,str(root/"Tests"/"smoke.py"),"--output-only","--backend","0"],check=True)
+            return
         cache=root/"bin"/".build"
         for test in [cache/"FlowTest.exe",cache/"GpuFlowTest.exe"]:
             subprocess.run([str(test)],check=True)

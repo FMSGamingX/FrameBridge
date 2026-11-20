@@ -2,7 +2,7 @@
 #include "../Rendering/Renderer.hpp"
 #include "../Backends/NvidiaFlow.hpp"
 #include "ShaderBytecode.hpp"
-#include <d3dcompiler.h>
+#include "../Rendering/OutputClient.hpp"
 namespace fb
 {
 namespace
@@ -20,11 +20,8 @@ struct Gpu final : Renderer
     std::wstring adapter;
     ComPtr<ID3D11Device> device;
     ComPtr<ID3D11DeviceContext> ctx;
-    ComPtr<IDXGISwapChain> chain;
+    OutputClient output;
     ComPtr<ID3D11ComputeShader> estimate, warp;
-    ComPtr<ID3D11VertexShader> vs;
-    ComPtr<ID3D11PixelShader> ps;
-    ComPtr<ID3D11RenderTargetView> target;
     ComPtr<ID3D11Buffer> constants;
     struct Timing
     {
@@ -40,10 +37,9 @@ struct Gpu final : Renderer
     }
     Texture input[2], vectors, reverseVectors, mid;
     std::unique_ptr<NvidiaFlow> optical;
-    ComPtr<ID3D11PixelShader> originalShader;
     ComPtr<ID3D11SamplerState> sampler;
     bool useNvidia, resetHints = true;
-    int current = 0, w = 0, h = 0, vw = 0, vh = 0;
+    int current = 0, w = 0, h = 0;
     Gpu(HWND window, const Config &c, int index, bool nvidia = false) : hwnd(window), config(c), useNvidia(nvidia)
     {
         ComPtr<IDXGIFactory1> f;
@@ -61,23 +57,6 @@ struct Gpu final : Renderer
         check(D3D11CreateDevice(a.Get(), D3D_DRIVER_TYPE_UNKNOWN, nullptr, 0, &level, 1, D3D11_SDK_VERSION,
                                 &device, nullptr, &ctx),
               "Create Direct3D 11 compute device");
-        DXGI_SWAP_CHAIN_DESC sd{};
-        sd.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-        if (c.exclusive)
-        {
-            sd.BufferDesc.Width = c.outputW;
-            sd.BufferDesc.Height = c.outputH;
-            sd.BufferDesc.RefreshRate = {UINT(c.rateNum), UINT(c.rateDen)};
-        }
-        sd.SampleDesc.Count = 1;
-        sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        sd.BufferCount = 2;
-        sd.OutputWindow = hwnd;
-        sd.Windowed = TRUE;
-        sd.SwapEffect = c.exclusive ? DXGI_SWAP_EFFECT_DISCARD : DXGI_SWAP_EFFECT_FLIP_DISCARD;
-        sd.Flags = c.exclusive ? DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH : 0;
-        check(f->CreateSwapChain(device.Get(), &sd, &chain), "Create output swap chain");
-        f->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
         check(device->CreateComputeShader(estimateCode, sizeof estimateCode, nullptr, &estimate),
               "Create motion shader");
         check(device->CreateComputeShader(useNvidia ? nvWarpCode : warpCode,
@@ -85,18 +64,12 @@ struct Gpu final : Renderer
               "Create warping shader");
         if (useNvidia)
         {
-            check(device->CreatePixelShader(nvOriginalCode, sizeof nvOriginalCode, nullptr, &originalShader),
-                  "Create NVIDIA original-frame shader");
             D3D11_SAMPLER_DESC s{};
             s.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
             s.AddressU = s.AddressV = s.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
             s.ComparisonFunc = D3D11_COMPARISON_NEVER;
             check(device->CreateSamplerState(&s, &sampler), "Create midpoint sampler");
         }
-        check(device->CreateVertexShader(vertexCode, sizeof vertexCode, nullptr, &vs),
-              "Create output vertex shader");
-        check(device->CreatePixelShader(pixelCode, sizeof pixelCode, nullptr, &ps),
-              "Create output pixel shader");
         for (auto &slot : timings)
         {
             auto query = [&](D3D11_QUERY type, ComPtr<ID3D11Query> &dest) {
@@ -111,39 +84,7 @@ struct Gpu final : Renderer
         bd.ByteWidth = 16;
         bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         check(device->CreateBuffer(&bd, nullptr, &constants), "Create shader settings");
-        if (c.exclusive)
-        {
-            ComPtr<IDXGIOutput> output;
-            check(chain->GetContainingOutput(&output), "Find fullscreen monitor");
-            DXGI_MODE_DESC requested{};
-            requested.Width = c.outputW;
-            requested.Height = c.outputH;
-            requested.RefreshRate = {UINT(c.rateNum), UINT(c.rateDen)};
-            requested.Format = sd.BufferDesc.Format;
-            DXGI_MODE_DESC match{};
-            check(output->FindClosestMatchingMode(&requested, &match, device.Get()), "Validate monitor mode");
-            if (match.Width != requested.Width || match.Height != requested.Height ||
-                uint64_t(match.RefreshRate.Numerator) * requested.RefreshRate.Denominator !=
-                    uint64_t(requested.RefreshRate.Numerator) * match.RefreshRate.Denominator)
-                throw std::runtime_error("The selected monitor mode is no longer available.");
-            HRESULT fullscreen = DXGI_ERROR_NOT_CURRENTLY_AVAILABLE;
-            for (int attempt = 0; attempt < 8 && fullscreen == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE; ++attempt)
-            {
-                if (attempt)
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                fullscreen = chain->SetFullscreenState(TRUE, output.Get());
-            }
-            if (fullscreen == DXGI_ERROR_NOT_CURRENTLY_AVAILABLE && GetForegroundWindow() != hwnd)
-                throw std::runtime_error(
-                    "Windows requires the output window to have foreground focus for exclusive fullscreen.");
-            check(fullscreen, "Enter exclusive fullscreen");
-            HRESULT resized = chain->ResizeTarget(&match);
-            if (FAILED(resized))
-            {
-                chain->SetFullscreenState(FALSE, nullptr);
-                check(resized, "Apply fullscreen resolution");
-            }
-        }
+
     }
     Texture texture(int x, int y, DXGI_FORMAT format, bool write)
     {
@@ -250,51 +191,11 @@ struct Gpu final : Renderer
     }
     bool present(const Frame &, bool middle) override
     {
-        RECT r{};
-        GetClientRect(hwnd, &r);
-        if (r.right < 1 || r.bottom < 1 || !IsWindowVisible(hwnd))
-            return false;
-        if (vw != r.right || vh != r.bottom)
-        {
-            ctx->OMSetRenderTargets(0, nullptr, nullptr);
-            target.Reset();
-            vw = r.right;
-            vh = r.bottom;
-            check(chain->ResizeBuffers(0, vw, vh, DXGI_FORMAT_UNKNOWN,
-                                       config.exclusive ? DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH : 0),
-                  "Resize output surface");
-            ComPtr<ID3D11Texture2D> back;
-            check(chain->GetBuffer(0, IID_PPV_ARGS(&back)), "Access back buffer");
-            check(device->CreateRenderTargetView(back.Get(), nullptr, &target), "Bind back buffer");
-        }
-        float scale = std::min(float(vw) / w, float(vh) / h);
-        D3D11_VIEWPORT vp{(vw - w * scale) / 2, (vh - h * scale) / 2, w * scale, h * scale, 0, 1};
-        float black[]{0, 0, 0, 1};
-        ctx->ClearRenderTargetView(target.Get(), black);
-        ctx->OMSetRenderTargets(1, target.GetAddressOf(), nullptr);
-        ctx->RSSetViewports(1, &vp);
-        ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        ctx->VSSetShader(vs.Get(), nullptr, 0);
-        bool nvOriginal = useNvidia && !middle;
-        ctx->PSSetShader(nvOriginal ? originalShader.Get() : ps.Get(), nullptr, 0);
-        ctx->PSSetConstantBuffers(0, 1, constants.GetAddressOf());
-        ctx->PSSetShaderResources(nvOriginal ? 4 : 0, 1, (middle ? mid : input[current]).read.GetAddressOf());
-        ctx->Draw(3, 0);
-        ID3D11ShaderResourceView *empty = nullptr;
-        ctx->PSSetShaderResources(nvOriginal ? 4 : 0, 1, &empty);
-        HRESULT hr = chain->Present(config.vsync ? 1 : 0, 0);
-        if (hr == DXGI_STATUS_MODE_CHANGED)
-        {
-            vw = vh = 0;
-            return false;
-        }
-        check(hr, "Present output frame");
-        return hr == S_OK;
+
+        return output.gpu(device.Get(),ctx.Get(),(middle ? mid : input[current]).data.Get());
     }
     ~Gpu()
     {
-        if (config.exclusive && chain)
-            chain->SetFullscreenState(FALSE, nullptr);
         if (ctx)
         {
             ctx->ClearState();
@@ -309,6 +210,8 @@ struct Gpu final : Renderer
 } // namespace
 std::unique_ptr<Renderer> gpuRenderer(HWND hwnd, const Config &c, int index, bool nvidia)
 {
-    return std::make_unique<Gpu>(hwnd, c, index, nvidia);
+    auto renderer = std::make_unique<Gpu>(hwnd, c, index, nvidia);
+    renderer->output.open(hwnd, c, index);
+    return renderer;
 }
 } // namespace fb

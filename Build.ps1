@@ -21,6 +21,10 @@ if(!(Test-Path $h) -or ($shaderFiles | Where-Object {(Get-Item $_).LastWriteTime
 $windres=Join-Path (Split-Path -Parent $Compiler) 'x86_64-w64-mingw32-windres.exe'
 & $windres Engine/Version.rc -O coff -o "$cache/Version.obj"
 if($LASTEXITCODE){throw 'Engine version metadata compilation failed'}
+& $windres Output/Version.rc -O coff -o "$cache/OutputVersion.obj"
+if($LASTEXITCODE){throw 'Output executable metadata build failed'}
+& $Compiler -std=c++20 -O2 -static -municode -mwindows "-I$cache" Output/Main.cpp "$cache/OutputVersion.obj" -ld3d11 -ldxgi -luuid -o "$out\FrameBridge.Output.exe"
+if($LASTEXITCODE){throw 'Output executable build failed'}
 $src=@(Get-ChildItem Engine -Recurse -Filter *.cpp | ForEach-Object FullName)
 & $Compiler -std=c++20 -O2 -static -shared -DUNICODE -D_UNICODE "-I$cache" -isystem ThirdParty/ONNXRuntime/include @src "$cache/Version.obj" -o "$out\FrameBridge.Engine.dll" -ld3d11 -ldxgi -ld3dcompiler -lmfreadwrite -lmfplat -lmf -lmfuuid -lole32 -luuid -lgdi32 -lwinmm -luser32 -lpdh
 if($LASTEXITCODE){throw 'C++ compilation failed'}
@@ -36,7 +40,7 @@ if($Test){
     if($LASTEXITCODE){throw 'Motion test compilation failed'}
     & "$cache/FlowTest.exe"
     if($LASTEXITCODE){throw 'Motion interpolation test failed'}
-    & $Compiler -std=c++20 -O2 -static "-I$cache" Tests/gpu_flow_test.cpp Engine/Backends/Nvidia.cpp -ld3d11 -ldxgi -luuid -o "$cache/GpuFlowTest.exe"
+    & $Compiler -std=c++20 -O2 -static "-I$cache" Tests/gpu_flow_test.cpp Engine/Backends/Nvidia.cpp -lole32 -ld3d11 -ldxgi -luuid -o "$cache/GpuFlowTest.exe"
     if($LASTEXITCODE){throw 'GPU regression compilation failed'}
     & "$cache/GpuFlowTest.exe"
     if($LASTEXITCODE){throw 'GPU midpoint or original preservation test failed'}
