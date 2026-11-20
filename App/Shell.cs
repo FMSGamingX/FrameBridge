@@ -254,7 +254,7 @@ internal sealed partial class Shell : Window
             live && stats.width > 0 ? String.Format("{0} × {1}   ·   {2:0.##} fps source   ·   SDR RGB",
                                                     stats.width, stats.height, stats.rate)
             : kind == 0             ? "Predictable moving targets   ·   " + sourceFps + " fps source"
-            : kind == 4             ? "PlayStation LAN discovery"
+            : kind == 4             ? "PlayStation network stream"
             : kind == 2             ? "Media Foundation capture device"
             : kind == 1             ? "Local file   ·   Windows Media Foundation"
                                     : "Windows desktop capture";
@@ -265,7 +265,7 @@ internal sealed partial class Shell : Window
         F<TextBlock>("NoSignal").Visibility = !live && kind != 0 ? Visibility.Visible : Visibility.Collapsed;
         surface.Visibility = live && outputMode == 0 ? Visibility.Visible : Visibility.Hidden;
         F<Button>("StartButton").IsEnabled =
-            !Busy && kind != 4 && !profiling && (kind != 1 || file.Length > 0) && (kind != 2 || deviceKey.Length > 0);
+            !Busy && (kind != 4 || (pairedPs5 && !pairingPs5)) && !profiling && (kind != 1 || file.Length > 0) && (kind != 2 || deviceKey.Length > 0);
         F<Button>("StopButton").IsEnabled = live;
     }
     async void Discover()
@@ -364,7 +364,7 @@ internal sealed partial class Shell : Window
     }
     void Start()
     {
-        if (Busy || kind == 4)
+        if (Busy || (kind == 4 && (!pairedPs5 || pairingPs5)))
             return;
         try
         {
@@ -374,7 +374,7 @@ internal sealed partial class Shell : Window
             int refresh = fb_refresh(monitor.DeviceName);
             var bounds = screens[desktopIndex].Bounds;
             var c = new Config {
-                inputMilliFps = (int)Math.Round(sourceFps * 1000),
+                inputMilliFps = kind==4 ? psFps*1000 : (int)Math.Round(sourceFps * 1000),
                 hudAware = hudAware ? 1 : 0,
                 vsync = vsync ? 1 : 0,
                 kind = kind,
@@ -454,7 +454,7 @@ internal sealed partial class Shell : Window
                 UpdateLayout();
             }
             IntPtr handle = outputMode >= 3 ? exclusiveHandle : active.Handle;
-            string key = kind == 1 ? file : deviceKey;
+            string key = kind == 4 ? psHost : kind == 1 ? file : deviceKey;
             session = nvidiaMode && c.generate != 0
                           ? Native.fb_start_nvidia_flow(handle, ref c, key)
                           : Native.fb_start_ai(handle, ref c, key, aiMode && c.generate != 0 ? ModelPath() : null);
@@ -465,7 +465,7 @@ internal sealed partial class Shell : Window
             engineName = "Starting…";
             Status("Opening input", "#EAC887");
             Message("Opening " + runName + "…");
-            Log("Start · " + new[] { "synthetic", "file", "device", "desktop" }[kind]);
+            Log("Start · " + new[] { "synthetic", "file", "device", "desktop", "PS5 LAN" }[kind]);
             Navigate(page);
         }
         catch (Exception e)
@@ -495,7 +495,7 @@ internal sealed partial class Shell : Window
     static extern bool GetClientRect(IntPtr hwnd, out RECT rect);
     double Rate()
     {
-        return (kind == 0 || kind == 3) ? sourceFps : knownRate;
+        return kind==4 ? psFps : (kind == 0 || kind == 3) ? sourceFps : knownRate;
     }
     void Status(string text, string color)
     {

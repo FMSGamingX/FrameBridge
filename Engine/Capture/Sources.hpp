@@ -8,7 +8,8 @@ enum class Kind
     Pattern,
     File,
     Device,
-    Desktop
+    Desktop,
+    PlayStation
 };
 struct Config
 {
@@ -35,6 +36,7 @@ struct MediaRuntime
     }
 };
 std::unique_ptr<Source> openSource(const Config &c, const std::wstring &key);
+std::unique_ptr<Source> playStationSource(const Config &c, const std::wstring &host);
 std::unique_ptr<Source> mediaSource(const Config &c, const std::wstring &key);
 void pattern(Frame &f, double seconds);
 } // namespace fb

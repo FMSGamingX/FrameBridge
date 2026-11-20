@@ -1,20 +1,31 @@
-# PS5 network input feasibility
+# Direct PS5 LAN input · private prototype
 
 Created by Faris Alsari / FMSGaming · Famous Gaming
 
-A direct LAN client is technically feasible. PXPlay documents registration on the same network using the console's displayed pairing code and the user's PlayStation account identity. Sony documents enabling Remote Play, pairing and using its consumer client. We did not identify a public Sony SDK granting third-party Windows clients a supported protocol contract. PXPlay's manual describes user-visible behavior and supplies no implementation license or protocol specification. [PXPlay registration](https://streamingdv.github.io/pxplay/) · [Sony pairing instructions](https://www.playstation.com/en-gb/support/games/playstation-remote-play-on-pc-and-mac/)
+## Pair your console
 
-The upstream chiaki-ng project implements an independent client. Its library covers discovery, registration, session establishment, feedback and media reception. It exposes video samples to its FFmpeg decoder and receives audio through an Opus path. FrameBridge could use a private, optional LAN backend with the following boundaries. [Upstream architecture](https://github.com/chiaki-ng/chiaki-ng/blob/main/CONTRIBUTOR_GUIDE.md)
+1. Turn on the PS5, sign in to the account you will use, and enable **Settings → System → Remote Play → Enable Remote Play**. Put the PC and console on the same LAN.
+2. In FrameBridge choose **Video inputs → PS5 Network Connection → Find PS5 consoles**. Select your console, or type its IPv4 address. Discovery reports awake/rest state. Wake the console before pairing.
+3. Enter that account's Base64 PSN Account ID. You can obtain it with the pinned upstream account-ID script. Run that script locally, follow its PlayStation sign-in instructions and keep the redirect URL private. The account name and email address are different identifiers. [Upstream account-ID tool](https://github.com/chiaki-ng/chiaki-ng/blob/v1.10.1/scripts/psn-account-id.py)
+4. Open **Pair Device** on the PS5 and enter its fresh eight-digit code in FrameBridge. If the console user has a four-digit login passcode, enter it in the separate optional field. Click **Pair PS5**.
+5. Select the requested 30 or 60 FPS input, configure generation and output, then click **Start processing**. The input page shows the stream size and received rate. Choose **Disconnect PS5** or the main Stop button to end the session.
 
-| Area | Proposed integration |
-|---|---|
-| Discovery and pairing | Discover local consoles, allow an explicit address, request the user-visible pairing code and account ID, and report rejection or expiry. |
-| Authentication and session | Reuse the upstream authenticated registration/session APIs. Store registration keys in Windows Credential Manager or DPAPI per user. Keep codes and keys out of logs and Git. |
-| Video | Feed decoded frames with timestamps into the native Source interface. Reset interpolation on lost frames, resolution changes and reconnect. |
-| Audio | Queue decoded samples in a bounded WASAPI renderer and synchronize to the video timeline. |
-| Controller | Map a selected Windows controller to authenticated session feedback, clear held inputs on disconnect and test rumble separately. |
-| Monitoring | Report receiving, decoder readiness, actual resolution, observed frame intervals, queue delay, losses and disconnect cause. Measure interactive latency with physical hardware. |
+Pairing stores the resulting registration keys and optional login passcode in the current Windows user's Credential Manager under `FrameBridge/PS5/<address>`. Removing that generic credential forgets the pairing. If the console's IP changes, pair again at the new address.
 
-Firmware changes can interrupt interoperability. Upstream's session header uses an AGPL-3.0-only license with an OpenSSL exception. Before integrating or distributing a combined application, decide how FrameBridge will satisfy applicable source, notice and licensing obligations and review any applicable platform terms. An IPC boundary alone does not resolve those questions. The upstream license covers upstream code. Sony authorization is a separate question. [Session header](https://github.com/chiaki-ng/chiaki-ng/blob/main/lib/include/chiaki/session.h) · [Upstream license](https://github.com/chiaki-ng/chiaki-ng/blob/main/COPYING)
+## Media and controls
 
-The PS5 Network Connection source sends a short LAN discovery request on active IPv4 interfaces when the user selects Find PS5 consoles. It displays responding consoles and their advertised awake or rest state. It does not collect pairing details. Session establishment and decoding await a backend decision. [Discovery request format](https://github.com/chiaki-ng/chiaki-ng/blob/main/lib/src/discovery.c) Hardware acceptance requires owner-authorized registration, real picture and audio, controller response, reconnect, disconnect and confirmation that restricted content stays protected.
+The optional plugin uses chiaki-ng v1.10.1 for registration, authenticated LAN sessions and controller feedback. It requests a 1080p SDR H.264 stream and allows the console to downgrade the profile. FFmpeg decodes received packets and converts the latest decoded frame to the engine's BGRA input format. Newer decoded frames replace unread frames. A discontinuity suppresses interpolation across a lost or replaced frame. A restricted-display notification ends the session.
+
+Opus audio plays through the default Windows wave output with four reusable buffers. XInput controller slot 1 supplies buttons, sticks and triggers while the session runs. Native DualSense USB, adaptive triggers, touchpad, PS button, haptics, microphone, WAN traversal and synchronized audiovisual latency measurement are outside this prototype.
+
+FrameBridge loads the plugin from **bin/PlayStation**. The base build and other inputs work independently. The upstream session API uses `LicenseRef-AGPL-3.0-only-OpenSSL`. This integration is private pending a distribution and license review. Changes in PS5 firmware may affect unofficial clients. [chiaki-ng source](https://github.com/chiaki-ng/chiaki-ng/tree/v1.10.1) · [License](https://github.com/chiaki-ng/chiaki-ng/blob/v1.10.1/COPYING) · [Sony pairing instructions](https://www.playstation.com/en-us/support/games/playstation-remote-play-on-pc-and-mac/)
+
+## Development
+
+Use MSYS2 UCRT64. Install the following signed packages in that environment.
+
+```bash
+pacman -S --needed mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,curl,json-c,libevent,miniupnpc,openssl,opus,pkgconf,protobuf,python-protobuf,ffmpeg}
+```
+
+Run `Tools/Build-PlayStation.ps1 -Test` in PowerShell, passing `-MsysRoot` for a custom installation. The script checks the pinned upstream revision, builds the optional module, follows its PE imports to stage runtime DLLs and exercises the H.264 packet-to-BGRA path using a generated clip. Run `Build.ps1 -Test` for the main application. Live acceptance requires pairing on a real console and checking picture, audio, controller response, disconnect and reconnect.

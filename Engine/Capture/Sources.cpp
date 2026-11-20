@@ -143,6 +143,8 @@ std::unique_ptr<Source> openSource(const Config &c, const std::wstring &key)
     case Kind::File:
     case Kind::Device:
         return mediaSource(c, key);
+    case Kind::PlayStation:
+        return playStationSource(c,key);
     }
     throw std::runtime_error("Unknown input.");
 }

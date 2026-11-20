@@ -49,4 +49,4 @@ The original project's open-source license decision is deferred. Third-party cod
 
 FrameBridge starts **bin/FrameBridge.Output.exe** automatically when processing begins. Add this executable under NVIDIA App → Graphics → Program Settings to experiment with Smooth Motion. For an isolated test, turn off FrameBridge frame generation and play a 30 fps file on the second monitor. A successful driver profile change or DXGI Present does not verify driver-generated frames. Use independent display measurements. [Build and test](Documentation/Build.md)
 
-Select **Video inputs → PS5 Network Connection → Find PS5 consoles** for LAN discovery. Pairing and network streaming are pending. [PlayStation research](Documentation/PlayStation.md) · [Development workflow](Documentation/Development.md)
+Select **Video inputs → PS5 Network Connection** for the optional private chiaki-ng prototype. Pair on the LAN to feed decoded video directly into FrameBridge. [Pairing and setup](Documentation/PlayStation.md) · [Development workflow](Documentation/Development.md)

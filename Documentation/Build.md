@@ -43,3 +43,5 @@ Use the numeric DXGI adapter index to compare specific GPUs. Negative one select
 Observed build environment on 19 November 2026: Windows 11 Pro 25H2, build 26200.9974, Ryzen 5 7600X (12 logical processors), with no registered dotnet SDK or usable MSVC desktop compiler found. NVIDIA's runtime driver and Windows' Direct3D interfaces were present. No standalone CUDA or Vulkan development kit was found in the inspected paths. LLVM-MinGW 20261117 (Clang 23.1.6) was installed per-user. [LLVM-MinGW release](https://github.com/mstorsjo/llvm-mingw/releases/tag/20261117)
 
 For the hardware-specific regression suite on the secondary 75 Hz display, run `py -3 Tests/secondary_suite.py` after building with `-Test`. For an originals-only video-file run with the same display guard, use `py -3 Tests/secondary_suite.py --presentation-only`. The suite restores the previous desktop mode on exit.
+
+Build the optional private PS5 input separately with `Tools/Build-PlayStation.ps1 -Test`. [Dependencies and pairing](PlayStation.md)

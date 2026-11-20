@@ -558,6 +558,10 @@ internal sealed partial class Shell
     }
     void RefreshFieldValues()
     {
+        if(kind==4 && Busy && values.ContainsKey("Stream") && stats.inputs>0) {
+            values["Connection"].Text="Streaming";
+            values["Stream"].Text=stats.width+" × "+stats.height+" · "+Number(inputFps)+" received fps";
+        }
         if (values.ContainsKey("GPU utilization"))
             values["GPU utilization"].Text = GpuText();
         if (page != "Performance")
