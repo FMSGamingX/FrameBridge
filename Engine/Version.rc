@@ -1,0 +1,28 @@
+// FrameBridge - Faris Alsari / FMSGaming - Famous Gaming
+#include <winver.h>
+1 VERSIONINFO
+FILEVERSION 0,1,0,0
+PRODUCTVERSION 0,1,0,0
+FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+FILEFLAGS 0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_DLL
+BEGIN
+ BLOCK "StringFileInfo"
+ BEGIN
+  BLOCK "040904B0"
+  BEGIN
+   VALUE "CompanyName", "Famous Gaming\0"
+   VALUE "FileDescription", "FrameBridge video processing engine\0"
+   VALUE "FileVersion", "0.1.0\0"
+   VALUE "LegalCopyright", "Faris Alsari / FMSGaming - Famous Gaming\0"
+   VALUE "OriginalFilename", "FrameBridge.Engine.dll\0"
+   VALUE "ProductName", "FrameBridge\0"
+   VALUE "ProductVersion", "0.1.0\0"
+  END
+ END
+ BLOCK "VarFileInfo"
+ BEGIN
+  VALUE "Translation", 0x409, 1200
+ END
+END

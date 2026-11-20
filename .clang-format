@@ -1,0 +1,7 @@
+# FrameBridge • Faris Alsari / FMSGaming • Famous Gaming
+BasedOnStyle: Microsoft
+ColumnLimit: 110
+IndentWidth: 4
+SortIncludes: Never
+AllowShortFunctionsOnASingleLine: Empty
+

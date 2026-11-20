@@ -1,0 +1,6 @@
+# FrameBridge • Faris Alsari / FMSGaming • Famous Gaming
+bin/
+Tests/results/
+*.user
+__pycache__/
+
