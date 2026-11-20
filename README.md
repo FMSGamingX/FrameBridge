@@ -44,3 +44,9 @@ The Performance page reports processing work, midpoint preparation, GPU kernel d
 - [Local validation](Documentation/Validation.md)
 
 The original project's open-source license decision is deferred. Third-party code and model files retain their own copyright and license terms. See **ThirdParty/Notices**, **ThirdParty/ONNXRuntime/LICENSE**, and the licenses installed alongside the optional inference runtime and model.
+
+## Dedicated output and network input
+
+FrameBridge starts **bin/FrameBridge.Output.exe** automatically when processing begins. Add this executable under NVIDIA App → Graphics → Program Settings to experiment with Smooth Motion. For an isolated test, turn off FrameBridge frame generation and play a 30 fps file on the second monitor. A successful driver profile change or DXGI Present does not verify driver-generated frames. Use independent display measurements. [Build and test](Documentation/Build.md)
+
+Select **Video inputs → PS5 Network Connection → Find PS5 consoles** for LAN discovery. Pairing and network streaming are pending. [PlayStation research](Documentation/PlayStation.md) · [Development workflow](Documentation/Development.md)
