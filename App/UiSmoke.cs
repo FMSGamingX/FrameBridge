@@ -59,6 +59,23 @@ internal sealed partial class Shell
                     throw new Exception(p + " is empty.");
                 lines.Add(p + " opened");
             }
+            Navigate("Video inputs");
+            var sourcePicker = Fields.Children.OfType<ComboBox>().First();
+            sourcePicker.SelectedItem = sourcePicker.Items.OfType<Choice>().Single(c => c.Id == 4);
+            if (F<Button>("StartButton").IsEnabled || kind != 4)
+                throw new Exception("PS5 discovery allowed an unavailable streaming session.");
+            var addr = System.Net.IPAddress.Loopback;
+            string reply = "HTTP/1.1 620 Standby\ndevice-discovery-protocol-version:00030010\nhost-name:Fixture\n";
+            if (PlayStationDiscovery.Parse(reply,addr) != "Fixture · 127.0.0.1 · Rest mode" ||
+                PlayStationDiscovery.Parse("HTTP/1.1 200 OK\n",addr) != null)
+                throw new Exception("PS5 discovery response filtering failed.");
+            var find = Fields.Children.OfType<Button>().Single(b => (string)b.Content == "Find PS5 consoles");
+            find.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            while (scanningPs5) await Task.Delay(50);
+            lines.Add("PS5 LAN discovery: " + psStatus);
+            kind = 0;
+            ChangeSource();
+            Navigate("Dashboard");
             await Task.Delay(400);
             SaveView(directory, "dashboard");
             Start();

@@ -227,6 +227,7 @@ internal sealed partial class Shell : Window
     }
     string SourceName()
     {
+        if (kind == 4) return "PS5 Network Connection";
         if (kind == 0)
             return "Synthetic motion test";
         if (kind == 3)
@@ -253,6 +254,7 @@ internal sealed partial class Shell : Window
             live && stats.width > 0 ? String.Format("{0} × {1}   ·   {2:0.##} fps source   ·   SDR RGB",
                                                     stats.width, stats.height, stats.rate)
             : kind == 0             ? "Predictable moving targets   ·   " + sourceFps + " fps source"
+            : kind == 4             ? "PlayStation LAN discovery"
             : kind == 2             ? "Media Foundation capture device"
             : kind == 1             ? "Local file   ·   Windows Media Foundation"
                                     : "Windows desktop capture";
@@ -263,7 +265,7 @@ internal sealed partial class Shell : Window
         F<TextBlock>("NoSignal").Visibility = !live && kind != 0 ? Visibility.Visible : Visibility.Collapsed;
         surface.Visibility = live && outputMode == 0 ? Visibility.Visible : Visibility.Hidden;
         F<Button>("StartButton").IsEnabled =
-            !Busy && !profiling && (kind != 1 || file.Length > 0) && (kind != 2 || deviceKey.Length > 0);
+            !Busy && kind != 4 && !profiling && (kind != 1 || file.Length > 0) && (kind != 2 || deviceKey.Length > 0);
         F<Button>("StopButton").IsEnabled = live;
     }
     async void Discover()
@@ -362,7 +364,7 @@ internal sealed partial class Shell : Window
     }
     void Start()
     {
-        if (Busy)
+        if (Busy || kind == 4)
             return;
         try
         {

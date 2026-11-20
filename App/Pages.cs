@@ -214,12 +214,13 @@ internal sealed partial class Shell
     {
         Heading("Video source");
         Pick("Input",
-             Options("Synthetic motion test", "Video file", "Capture card / webcam", "Desktop capture"), kind,
+             Options("Synthetic motion test", "Video file", "Capture card / webcam", "Desktop capture", "PS5 Network Connection"), kind,
              c =>
              {
                  kind = c.Id;
                  ChangeSource();
              });
+        if (kind == 4) { PlayStationInput(); return; }
         if (kind == 0)
         {
             Pick("Test resolution", Options("1280 × 720", "1920 × 1080"), patternSize,
