@@ -10,6 +10,13 @@ Created by Faris Alsari / FMSGaming · Famous Gaming · 19 November 2026
 
 **DLSS Frame Generation.** NVIDIA Streamline requires renderer resources such as depth and engine motion vectors. A completed HDMI, desktop, webcam or decoded file frame lacks that data. The capture integration is disabled even on the RTX 5060. [NVIDIA DLSS Frame Generation integration guide](https://github.com/NVIDIA-RTX/Streamline/blob/main/docs/ProgrammingGuideDLSS_G.md)
 
-**NVIDIA Smooth Motion.** NVIDIA documents a driver-controlled feature for supported games and graphics APIs. The published material reviewed does not provide a frame-input/frame-output SDK for FrameBridge to invoke or a reliable way to attribute generated capture frames to that feature. The application exposes the hardware identity and driver version, and marks this integration unavailable. [NVIDIA App release highlights](https://www.nvidia.com/en-gb/software/nvidia-app/release-highlights/)
+## Enable Smooth Motion
+
+1. In FrameBridge, open **Generation → NVIDIA Smooth Motion**. This mode is offered when FrameBridge finds a Direct3D-capable NVIDIA adapter. The setup guide displays the full path to this installation's **FrameBridge.Output.exe**.
+2. Open **NVIDIA App → Graphics → Program Settings**. Use the three-dot menu above the program list to add a program. Browse to the output executable shown in FrameBridge. [NVIDIA App graphics settings](https://www.nvidia.com/en-gb/geforce/news/nvidia-app-download-and-features/)
+3. Select the new output program profile. Under **Driver Settings**, turn **Smooth Motion** on and apply the change if prompted. Availability depends on the GPU, installed driver and profile. [NVIDIA Smooth Motion settings](https://www.nvidia.com/en-us/geforce/news/gfecnt/20258/nvidia-app-global-dlss-overrides-rtx-40-series-smooth-motion/)
+4. Choose the video source and output monitor in FrameBridge and click **Start processing**. Restart an already-running session after changing the driver profile. FrameBridge opens the output executable automatically.
+
+The performance page counts original presentations in this mode. FrameBridge-generated presentations and motion jobs stay at zero. The driver controls any extra displayed frames. The project owner reports Smooth Motion working on their system.
 
 **Vendor-neutral acceleration.** Traditional interpolation requires Direct3D feature level 11.0 and resource support for the engine's compute shaders. Actual resource creation is tested on startup. The RTX 5060 and integrated Radeon were tested on this machine. Intel hardware remains untested. CUDA and TensorRT are not dependencies. DXGI detection and optional DirectML are independent of NVIDIA.

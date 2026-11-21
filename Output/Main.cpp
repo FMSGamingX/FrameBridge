@@ -29,7 +29,7 @@ struct Presentation
         ComPtr<IDXGIAdapter1> a;
         check(CreateDXGIFactory1(IID_PPV_ARGS(&f)), "Open output DXGI");
         if (p.adapter >= 0)
-            check(f->EnumAdapters1(p.adapter, &a), "Open producing adapter");
+            check(f->EnumAdapters1(p.adapter, &a), "Open presentation adapter");
         HRESULT result = D3D11CreateDevice(a.Get(), a ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE,
                                            nullptr, 0, nullptr, 0, D3D11_SDK_VERSION, &device, nullptr, &ctx);
         if (FAILED(result) && p.adapter < 0)
@@ -117,7 +117,7 @@ struct Presentation
             int values[]{w, h, 0, 0};
             ctx->UpdateSubresource(constants.Get(), 0, nullptr, values, 0, 0);
         }
-        if (p.adapter < 0)
+        if (p.transport == FrameTransport::Pixels)
         {
             if (resized || !s.data)
             {

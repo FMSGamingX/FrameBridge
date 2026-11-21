@@ -52,3 +52,9 @@ The driver-generated Smooth Motion result is unverified. NVIDIA App's installed 
 The optional module built from the pinned chiaki-ng revision and decoded a generated H.264 packet into a 320 × 180 BGRA frame with the expected color. The restricted-display callback stopped frame delivery in the same fixture. Registration against loopback failed and left the credential store empty for that address.
 
 The existing input, interpolation and presentation regression suite passed on the secondary 75 Hz monitor. The UI exercised LAN discovery. Live pairing, console video, audio, controller response and reconnection still require a PS5 pairing code and a hardware acceptance run.
+
+## Smooth Motion source presentation · 21 November 2026
+
+The 320 × 180, 30 FPS file fixture supplied 120 frames. On the secondary display configured at 75 Hz, the dedicated presenter acknowledged all 120 originals. FrameBridge recorded zero generated frames, motion jobs and dropped frames. These counters cover the application up to Present. The project owner separately reports that the NVIDIA App Smooth Motion profile works on this machine.
+
+The UI regression selected Smooth Motion with FrameBridge generation previously enabled, checked the executable path and source-rate lock, and opened the separate output window. The session logged zero midpoint jobs. Switching to NVIDIA Optical Flow produced midpoints again.

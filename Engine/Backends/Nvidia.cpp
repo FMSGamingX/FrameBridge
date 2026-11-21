@@ -36,8 +36,8 @@ const wchar_t *dlssCaptureStatus()
 }
 const wchar_t *smoothMotionCaptureStatus()
 {
-    return L"Smooth Motion is a driver feature for supported games. NVIDIA has not documented a "
-           L"captured-frame inference API for this pipeline.";
+    return L"NVIDIA App controls Smooth Motion for FrameBridge.Output.exe. FrameBridge reports only "
+           L"its own presentations.";
 }
 } // namespace
 FB void fb_nvidia_status(int mode, wchar_t *text, int length)

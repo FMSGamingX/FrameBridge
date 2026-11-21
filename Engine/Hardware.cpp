@@ -59,6 +59,16 @@ FB int fb_refresh(const wchar_t *display)
                ? int(dm.dmDisplayFrequency)
                : 0;
 }
+FB int fb_adapter_vendor(int index)
+{
+    ComPtr<IDXGIFactory1> factory;
+    ComPtr<IDXGIAdapter1> adapter;
+    DXGI_ADAPTER_DESC1 desc{};
+    if (index < 0 || FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&factory))) ||
+        FAILED(factory->EnumAdapters1(index, &adapter)) || FAILED(adapter->GetDesc1(&desc)))
+        return 0;
+    return desc.VendorId;
+}
 FB int fb_adapter_info(int index, wchar_t *text, int cap)
 {
     ComPtr<IDXGIFactory1> f;

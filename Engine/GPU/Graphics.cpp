@@ -211,7 +211,7 @@ struct Gpu final : Renderer
 std::unique_ptr<Renderer> gpuRenderer(HWND hwnd, const Config &c, int index, bool nvidia)
 {
     auto renderer = std::make_unique<Gpu>(hwnd, c, index, nvidia);
-    renderer->output.open(hwnd, c, index);
+    renderer->output.open(hwnd, c, index, FrameTransport::SharedTexture);
     return renderer;
 }
 } // namespace fb

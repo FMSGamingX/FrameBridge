@@ -170,7 +170,7 @@ internal sealed partial class Shell
     }
     string AdapterName()
     {
-        var a = adapters.Find(x => x.Id == backend);
+        var a = adapters.Find(x => x.Id == EffectiveBackend);
         if (a != null)
             return a.Text;
         return backend == -2 ? "CPU" : adapters.Count > 0 ? adapters[0].Text : "CPU";
@@ -181,7 +181,7 @@ internal sealed partial class Shell
         Label("INPUT");
         Text(SourceName(), 15, "Ink", 3, true);
         Label("GENERATION");
-        Text(pref.Generate ? (nvidiaMode ? "NVIDIA Optical Flow"
+        Text(smoothMotion ? "NVIDIA Smooth Motion · source frames" : pref.Generate ? (nvidiaMode ? "NVIDIA Optical Flow"
                               : aiMode   ? "AI interpolation · RIFE"
                               : hudAware ? "HUD-aware optical flow"
                                          : "Traditional interpolation")
@@ -196,7 +196,7 @@ internal sealed partial class Shell
              15, "Ink", 3, true);
         Divider();
         Data("Detected GPU", AdapterName());
-        Data("Output target", pref.Generate ? TargetName() : "Source rate");
+        Data("Output target", pref.Generate && !smoothMotion ? TargetName() : "Source rate");
         Data("GPU utilization", GpuText());
         Action("Configure input", delegate { Navigate("Video inputs"); });
     }
@@ -317,21 +317,16 @@ internal sealed partial class Shell
     void Generation()
     {
         Heading("Frame generation");
-        Check("Enable frame generation", pref.Generate,
-              v =>
-              {
-                  pref.Generate = v;
-                  Save();
-                  Navigate(page);
-              });
         var modes = Options("Traditional interpolation");
         modes.Add(new Choice("HUD-aware optical flow", 2));
         if (opticalAdapters.Count > 0)
             modes.Add(new Choice("NVIDIA Optical Flow", 3));
         if (AiAvailable())
             modes.Add(new Choice("AI interpolation · RIFE", 1));
+        if (nvidiaAdapters.Count > 0)
+            modes.Add(new Choice("NVIDIA Smooth Motion", 4));
         var mode = Pick("Generation mode", modes,
-                        nvidiaMode ? 3
+                        smoothMotion ? 4 : nvidiaMode ? 3
                         : aiMode   ? 1
                         : hudAware ? 2
                                    : 0,
@@ -340,6 +335,14 @@ internal sealed partial class Shell
                             aiMode = c.Id == 1;
                             hudAware = c.Id == 2;
                             nvidiaMode = c.Id == 3;
+                            smoothMotion = c.Id == 4;
+                            if (smoothMotion)
+                            {
+                                if (outputMode >= 3)
+                                    ReadModes();
+                                if (outputMode == 0 || (outputMode >= 3 && exclusive == null))
+                                    outputMode = 1;
+                            }
                             if (nvidiaMode && !opticalAdapters.Exists(a => a.Id == backend))
                             {
                                 backend = opticalAdapters[0].Id;
@@ -355,8 +358,24 @@ internal sealed partial class Shell
         if (!AiAvailable())
             mode.Items.Add(
                 new ComboBoxItem { Content = "AI interpolation · install model", IsEnabled = false });
-        foreach (string name in new[] { "NVIDIA DLSS Integration", "NVIDIA Smooth Motion" })
-            mode.Items.Add(new ComboBoxItem { Content = name, IsEnabled = false });
+        mode.Items.Add(new ComboBoxItem { Content = "NVIDIA DLSS Integration", IsEnabled = false });
+        if (nvidiaAdapters.Count == 0)
+            mode.Items.Add(new ComboBoxItem { Content = "NVIDIA Smooth Motion · NVIDIA presentation GPU required", IsEnabled = false });
+        if (smoothMotion)
+        {
+            if (nvidiaAdapters.Count > 1)
+                Pick("Presentation GPU", nvidiaAdapters, presentationAdapter, c => {
+                    presentationAdapter = c.Id;
+                    if (outputMode >= 3)
+                    {
+                        ReadModes();
+                        if (exclusive == null) outputMode = 1;
+                    }
+                });
+            SmoothMotionGuide();
+            return;
+        }
+        Check("Enable frame generation", pref.Generate, v => { pref.Generate = v; Save(); Navigate(page); });
         if (nvidiaMode)
         {
             Pick("Optical flow quality", Options("Performance", "Balanced", "Quality"), nvidiaQuality,
@@ -430,7 +449,20 @@ internal sealed partial class Shell
             Text("AI interpolation · Install the optional runtime and select an ONNX model in Settings.", 12,
                  "Muted", 6);
         Text(NvidiaStatus(0), 12, "Muted", 6);
-        Text(NvidiaStatus(1), 12, "Muted", 6);
+    }
+    void SmoothMotionGuide()
+    {
+        Text("FrameBridge sends original frames to the output window at the source cadence. The NVIDIA driver handles Smooth Motion.", 13, "Ink", 8);
+        Divider();
+        Heading("Set up NVIDIA App");
+        Text("1. Open NVIDIA App → Graphics → Program Settings. Use the three-dot menu above the program list and choose Add a program.", 13, "Ink", 8);
+        Text("2. Browse to the output executable for this installation.", 13, "Ink", 8);
+        var path = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "FrameBridge.Output.exe");
+        Fields.Children.Add(new TextBox { Text = path, IsReadOnly = true, TextWrapping = TextWrapping.Wrap,
+                                          Margin = new Thickness(0, 6, 0, 2) });
+        Text("3. Select FrameBridge.Output.exe. Under Driver Settings, turn Smooth Motion on and apply the change if prompted.", 13, "Ink", 8);
+        Text("4. Choose your input and output monitor in FrameBridge, then start processing. If the output was already open, stop and start it again.", 13, "Ink", 8);
+        Text(NvidiaStatus(1), 12, "Muted", 8);
     }
     List<Choice> MonitorChoices()
     {
@@ -450,13 +482,15 @@ internal sealed partial class Shell
         Heading("Presentation");
         ReadModes();
         var modes = Options("Windowed dashboard preview", "Separate output window", "Borderless fullscreen");
+        if (smoothMotion)
+            modes.RemoveAt(0);
         if (exclusive != null)
         {
             modes.Add(new Choice("Fullscreen · selected display mode", 4));
             modes.Add(new Choice("DXGI exclusive fullscreen", 3));
         }
         else if (outputMode >= 3)
-            outputMode = 0;
+            outputMode = smoothMotion ? 1 : 0;
         Pick("Output mode", modes, outputMode,
              c =>
              {
@@ -486,6 +520,13 @@ internal sealed partial class Shell
         int hz = outputMode >= 3 && exclusive != null ? (int)Math.Round(exclusive.Rate)
                                                       : fb_refresh(mon.DeviceName);
         double rate = Rate();
+        if (smoothMotion)
+        {
+            Data("Output FPS", rate > 0 ? rate.ToString("0.###") + " fps · source rate" : "Source rate");
+            Data("Active refresh", hz > 0 ? hz + " Hz" : "N/A");
+            Text("The presenter fits each original frame to the window and preserves its aspect ratio.", 12, "Muted", 8);
+            return;
+        }
         var choices =
             new List<Choice> { new Choice("Automatic", 0), new Choice("Source FPS · originals", -1) };
         foreach (int v in new[] { 15, 24, 25, 30, 45, 48, 50, 60, 75, 90, 100, 120 })

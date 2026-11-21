@@ -37,6 +37,8 @@ internal static partial class Native
     internal static extern IntPtr fb_start_nvidia_flow(IntPtr hwnd, ref Config config, string key);
     [DllImport(Library)]
     internal static extern int fb_nvidia_flow_adapter(int index);
+    [DllImport(Library)]
+    internal static extern int fb_adapter_vendor(int index);
     [DllImport(Library, CharSet = CharSet.Unicode)]
     internal static extern void fb_stats(IntPtr s, out Stats stats, StringBuilder backend, int bc,
                                          StringBuilder msg, int mc);

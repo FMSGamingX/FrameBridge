@@ -20,13 +20,15 @@ struct Handle
         value = h;
     }
 };
-inline constexpr uint32_t outputProtocol = 0x46420101;
+inline constexpr uint32_t outputProtocol = 0x46420102;
+enum class FrameTransport { Pixels, SharedTexture };
 struct Packet
 {
     uint32_t protocol;
     HWND window;
     DWORD producer;
     Config config;
+    FrameTransport transport;
     int adapter, width, height, slot;
     unsigned generation;
     HANDLE texture;

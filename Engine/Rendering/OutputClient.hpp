@@ -27,7 +27,7 @@ class OutputClient
     }
 
   public:
-    void open(HWND hwnd, const Config &config, int adapter)
+    void open(HWND hwnd, const Config &config, int adapter, FrameTransport transport)
     {
         if (worker.value)
             return;
@@ -36,12 +36,13 @@ class OutputClient
         wchar_t id[40]{}, path[32768]{};
         StringFromGUID2(guid, id, 40);
         std::wstring name = std::wstring(L"Local\\FrameBridge-") + id;
-        channel.open(name, true, adapter < 0);
+        channel.open(name, true, transport == FrameTransport::Pixels);
         auto &p = *channel.packet;
         p.protocol = outputProtocol;
         p.window = hwnd;
         p.producer = GetCurrentProcessId();
         p.config = config;
+        p.transport = transport;
         p.adapter = adapter;
         // The engine may also be hosted by the native test runner.
         HMODULE engine = GetModuleHandleW(L"FrameBridge.Engine.dll");

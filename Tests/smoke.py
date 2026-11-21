@@ -111,7 +111,8 @@ if __name__=="__main__":
             if not sample.exists(): make(sample)
             c.kind,c.generate=1,0
             info=run(hwnd,c,str(sample),7)
-            assert info.state==3 and info.inputs==120 and info.generated==0
+            assert info.state==3 and info.inputs==120 and info.outputs==120
+            assert info.generated==0 and info.jobs==0 and info.gpuJobs==0
             sys.exit(0)
         if args.nvidia_flow:
             c.generate=1

@@ -5,6 +5,18 @@
 #include "../AI/Inference.hpp"
 namespace fb
 {
+// Capture already provides BGRA. Send it directly to the presenter's upload surface.
+struct OriginalFrames final : Renderer
+{
+    OutputClient output;
+    OriginalFrames(HWND hwnd, const Config &config)
+    {
+        output.open(hwnd, config, config.backend, FrameTransport::Pixels);
+    }
+    void prepare(const Frame &, const Frame &, bool) override {}
+    bool present(const Frame &original, bool) override { return output.pixels(original); }
+    std::wstring name() const override { return L"Original frames · Direct3D output"; }
+};
 struct Software final : Renderer
 {
     HWND hwnd;
@@ -13,7 +25,10 @@ struct Software final : Renderer
     Frame mid;
     BlockFlow flow;
     std::unique_ptr<Inference> ai;
-    Software(HWND window, const Config &c) : hwnd(window), config(c) { output.open(hwnd,c,-1); }
+    Software(HWND window, const Config &c) : hwnd(window), config(c)
+    {
+        output.open(hwnd, c, -1, FrameTransport::Pixels);
+    }
     void prepare(const Frame &a, const Frame &b, bool gen) override
     {
         if (!gen)
@@ -38,6 +53,8 @@ std::unique_ptr<Renderer> gpuRenderer(HWND hwnd, const Config &c, int index, boo
 std::unique_ptr<Renderer> makeRenderer(HWND hwnd, const Config &c, std::wstring &notice,
                                        const std::wstring &model, bool nvidia)
 {
+    if (!c.generate && c.backend >= 0 && model.empty() && !nvidia)
+        return std::make_unique<OriginalFrames>(hwnd, c);
     if (nvidia)
     {
         if (c.backend < 0)

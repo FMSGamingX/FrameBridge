@@ -21,7 +21,7 @@ For HDMI console input, connect the console's output to a compatible capture car
 
 **NVIDIA Optical Flow** uses a compatible NVIDIA GPU's optical flow accelerator to track motion between two video frames. Choose it under **Generation → Generation mode**, then select Performance, Balanced or Quality. The optional occlusion setting gives more weight to the frame with consistent motion where objects overlap. Set **Output FPS → 60 fps** for a 30 fps source on a display running at 60 Hz or higher. The Performance page counts presented midpoints.
 
-**NVIDIA DLSS Frame Generation** and **NVIDIA Smooth Motion** have independent capability explanations in the app. See [compatibility research](Documentation/Compatibility.md).
+**NVIDIA Smooth Motion** sends original frames to a dedicated presenter for use with an NVIDIA App driver profile. DLSS Frame Generation remains unavailable for captured video. See [GPU compatibility](Documentation/Compatibility.md).
 
 ## Choosing frame rate and resolution
 
@@ -47,6 +47,6 @@ The original project's open-source license decision is deferred. Third-party cod
 
 ## Dedicated output and network input
 
-FrameBridge starts **bin/FrameBridge.Output.exe** automatically when processing begins. Add this executable under NVIDIA App → Graphics → Program Settings to experiment with Smooth Motion. For an isolated test, turn off FrameBridge frame generation and play a 30 fps file on the second monitor. A successful driver profile change or DXGI Present does not verify driver-generated frames. Use independent display measurements. [Build and test](Documentation/Build.md)
+Select **Generation → NVIDIA Smooth Motion** to present original frames at source cadence. The setup guide on that page includes the full path to **FrameBridge.Output.exe**. [NVIDIA App setup instructions](Documentation/Compatibility.md#enable-smooth-motion)
 
 Select **Video inputs → PS5 Network Connection** for the optional private chiaki-ng prototype. Pair on the LAN to feed decoded video directly into FrameBridge. [Pairing and setup](Documentation/PlayStation.md) · [Development workflow](Documentation/Development.md)

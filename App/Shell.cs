@@ -54,6 +54,10 @@ internal sealed partial class Shell : Window
     double sourceFps = 30;
     bool hudAware = true;
     bool nvidiaMode;
+    bool smoothMotion;
+    readonly List<Choice> nvidiaAdapters = new List<Choice>();
+    int presentationAdapter = -1;
+    int EffectiveBackend { get { return smoothMotion ? presentationAdapter : backend; } }
     int nvidiaQuality = 1;
     readonly List<Choice> opticalAdapters = new List<Choice>();
     static readonly int[] outputWidths = { 640, 960, 1280, 1600, 1920, 2560 };
@@ -150,6 +154,12 @@ internal sealed partial class Shell : Window
             {
                 var choice = new Choice(n.ToString(), i) { Details = d.ToString() };
                 adapters.Add(choice);
+                if (ok == 1 && Native.fb_adapter_vendor(i) == 0x10de)
+                {
+                    nvidiaAdapters.Add(choice);
+                    if (presentationAdapter < 0)
+                        presentationAdapter = i;
+                }
                 if (Native.fb_nvidia_flow_adapter(i) == 1)
                     opticalAdapters.Add(choice);
             }
@@ -258,11 +268,12 @@ internal sealed partial class Shell : Window
             : kind == 2             ? "Media Foundation capture device"
             : kind == 1             ? "Local file   ·   Windows Media Foundation"
                                     : "Windows desktop capture";
-        F<TextBlock>("PreviewTag").Text = live ? (outputMode == 0 ? "LIVE OUTPUT" : "INPUT PREVIEW")
+        F<TextBlock>("PreviewTag").Text = live ? (smoothMotion ? "OUTPUT WINDOW" : outputMode == 0 ? "LIVE OUTPUT" : "INPUT PREVIEW")
                                                : (kind == 0 ? "REFERENCE FRAME" : "STANDBY");
         F<Image>("Still").Visibility =
-            (!live && kind == 0) || (live && outputMode != 0) ? Visibility.Visible : Visibility.Hidden;
-        F<TextBlock>("NoSignal").Visibility = !live && kind != 0 ? Visibility.Visible : Visibility.Collapsed;
+            (!live && kind == 0) || (live && outputMode != 0 && !smoothMotion) ? Visibility.Visible : Visibility.Hidden;
+        F<TextBlock>("NoSignal").Text = live && smoothMotion ? "Playing in the output window" : "Waiting for an input signal";
+        F<TextBlock>("NoSignal").Visibility = (!live && kind != 0) || (live && smoothMotion) ? Visibility.Visible : Visibility.Collapsed;
         surface.Visibility = live && outputMode == 0 ? Visibility.Visible : Visibility.Hidden;
         F<Button>("StartButton").IsEnabled =
             !Busy && (kind != 4 || (pairedPs5 && !pairingPs5)) && !profiling && (kind != 1 || file.Length > 0) && (kind != 2 || deviceKey.Length > 0);
@@ -375,20 +386,20 @@ internal sealed partial class Shell : Window
             var bounds = screens[desktopIndex].Bounds;
             var c = new Config {
                 inputMilliFps = kind==4 ? psFps*1000 : (int)Math.Round(sourceFps * 1000),
-                hudAware = hudAware ? 1 : 0,
-                vsync = vsync ? 1 : 0,
+                hudAware = !smoothMotion && hudAware ? 1 : 0,
+                vsync = !smoothMotion && vsync ? 1 : 0,
                 kind = kind,
                 width = patternSize == 0 ? 1280 : 1920,
                 height = patternSize == 0 ? 720 : 1080,
                 profile = profile,
-                backend = backend,
+                backend = EffectiveBackend,
                 quality = nvidiaMode         ? nvidiaQuality
                           : aiMode           ? aiQuality
                           : qualityMode == 3 ? customQuality
                                              : qualityMode,
-                reduceArtifacts = pref.Artifact ? 1 : 0,
+                reduceArtifacts = !smoothMotion && pref.Artifact ? 1 : 0,
                 generate =
-                    pref.Generate && (target != -1 && (target == 0 || Math.Abs(target - Rate()) > 1)) ? 1 : 0,
+                    !smoothMotion && pref.Generate && (target != -1 && (target == 0 || Math.Abs(target - Rate()) > 1)) ? 1 : 0,
                 refresh = refresh,
                 buffer = pref.Buffer == 2 ? 2 : 1,
                 desktopX = bounds.X,
@@ -592,7 +603,7 @@ internal sealed partial class Shell : Window
             Message("Windows selected a different exclusive refresh. Use Fullscreen · selected display " +
                     "mode for the requested timing.");
         RefreshFieldValues();
-        if (outputMode != 0)
+        if (outputMode != 0 && !smoothMotion)
             UpdateThumbnail();
     }
     void UpdateThumbnail()

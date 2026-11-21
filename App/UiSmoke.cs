@@ -44,8 +44,11 @@ internal sealed partial class Shell
         if (File.Exists(errorFile))
             File.Delete(errorFile);
         var lines = new System.Collections.Generic.List<string>();
+        bool savedGeneration = pref.Generate;
         try
         {
+            // Exercise both paths even when the user's saved preference disables generation.
+            pref.Generate = true;
             if (OutputScreen().DeviceName != screens[outputIndex].DeviceName)
                 throw new Exception("Dashboard test window on wrong monitor.");
             lines.Add("Test monitor " + OutputScreen().DeviceName + " at " +
@@ -90,6 +93,31 @@ internal sealed partial class Shell
             lines.Add(String.Format("Dashboard: {0} original inputs, {1} presentations, {2} generated.",
                                     stats.inputs, stats.outputs, stats.generated));
             await Finish("Test stopped.");
+            if (nvidiaAdapters.Count > 0)
+            {
+                Navigate("Generation");
+                var picker = Fields.Children.OfType<ComboBox>().First();
+                picker.SelectedItem = picker.Items.OfType<Choice>().Single(c => c.Id == 4);
+                if (!smoothMotion || outputMode != 1 || Fields.Children.OfType<CheckBox>().Any() ||
+                    !Fields.Children.OfType<TextBox>().Any(b => File.Exists(b.Text) &&
+                        System.IO.Path.GetFileName(b.Text) == "FrameBridge.Output.exe"))
+                    throw new Exception("Smooth Motion setup or processing controls are incorrect.");
+                Navigate("Output");
+                if (!values.ContainsKey("Output FPS") || !values["Output FPS"].Text.Contains("source rate"))
+                    throw new Exception("Smooth Motion did not lock the presentation rate to input.");
+                Start();
+                await WaitForFrames();
+                if (stats.generated != 0 || stats.jobs != 0 || stats.activeGeneration != 0 ||
+                    stats.gpuJobs != 0 || !engineName.StartsWith("Original frames") ||
+                    outputWindow == null || stats.outputs > stats.inputs)
+                    throw new Exception("Smooth Motion did not use the originals-only presenter.");
+                lines.Add("Smooth Motion selection: " + stats.outputs +
+                          " source presentations, zero generated frames and zero motion jobs.");
+                await Finish("Test stopped.");
+                Navigate("Generation");
+                picker = Fields.Children.OfType<ComboBox>().First();
+                picker.SelectedItem = picker.Items.OfType<Choice>().Single(c => c.Id == 2);
+            }
             if (opticalAdapters.Count > 0)
             {
                 Navigate("Generation");
@@ -173,6 +201,7 @@ internal sealed partial class Shell
         }
         finally
         {
+            pref.Generate = savedGeneration;
             File.WriteAllLines(System.IO.Path.Combine(directory, "ui-test.txt"), lines);
         }
     }

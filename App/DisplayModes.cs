@@ -33,7 +33,7 @@ internal sealed partial class Shell
         var screen = screens[outputIndex];
         var text = new StringBuilder(150000);
         exclusiveModes.Clear();
-        if (backend == -2 || aiMode || fb_display_modes(screen.DeviceName, backend, text, text.Capacity) <= 0)
+        if (EffectiveBackend == -2 || aiMode || fb_display_modes(screen.DeviceName, EffectiveBackend, text, text.Capacity) <= 0)
         {
             exclusive = null;
             return;

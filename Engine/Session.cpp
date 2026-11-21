@@ -46,6 +46,7 @@ struct Session
     }
     void cancel()
     {
+        std::lock_guard g(lock);
         stop = true;
         cv.notify_all();
     }
@@ -54,7 +55,8 @@ struct Session
         std::lock_guard g(lock);
         message = wide(e.what());
         stats.state = 4;
-        cancel();
+        stop = true;
+        cv.notify_all();
     }
     bool until(Time at)
     {
@@ -122,7 +124,14 @@ struct Session
                 }
                 f->arrival = Clock::now();
                 {
-                    std::lock_guard g(lock);
+                    std::unique_lock g(lock);
+                    // A file can pause when presentation stalls. Live sources keep the drop-oldest policy.
+                    if (config.kind == int(Kind::File) && !config.generate)
+                    {
+                        cv.wait(g, [&] { return stop || pending.size() < size_t(config.buffer); });
+                        if (stop)
+                            break;
+                    }
                     stats.hdr = src->hdr;
                     stats.rate = src->rate;
                     stats.width = f->width;
@@ -182,6 +191,8 @@ struct Session
                         break;
                     cur = std::move(pending.front());
                     pending.pop_front();
+                    if (config.kind == int(Kind::File) && !config.generate)
+                        cv.notify_all();
                     rate = stats.rate;
                 }
                 bool eligible =
