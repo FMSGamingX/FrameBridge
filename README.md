@@ -2,7 +2,17 @@
 
 Created by Faris Alsari / FMSGaming · Famous Gaming · version 0.1.0
 
-A local x64 Windows application for previewing and interpolating external video. Open **bin/FrameBridge.exe**, leave **Synthetic motion test** selected, then choose **Start processing**. The default is HUD-aware optical flow with automatic GPU selection. The Generation page also offers classic optical flow, a wide motion search preset and optional RIFE. The image in standby is a reference frame from the test generator.
+## GTA VI at a smoother presentation rate
+
+Grand Theft Auto VI launched on current consoles with a 30 FPS target. FrameBridge is built for players who want to view a 30 FPS console, Remote Play or captured source at a higher presentation rate on a Windows display. It preserves every original frame and can generate one intermediate frame per adjacent pair for a 60 FPS presentation path.
+
+Use a compatible HDMI capture card for a console’s HDMI output, or capture a legitimate Remote Play window through **Desktop capture**. For compatible NVIDIA systems, select **NVIDIA Smooth Motion** so **FrameBridge.Output.exe** presents source frames to the NVIDIA App driver profile. [Set up Smooth Motion](Documentation/Compatibility.md#enable-smooth-motion)
+
+FrameBridge does not alter GTA VI’s simulation rate, console-side rendering, game files, network services, DRM or HDCP. Higher output FPS is video presentation interpolation. GTA VI is a Rockstar Games trademark. FrameBridge is an independent Famous Gaming project and has no affiliation with Rockstar Games, Sony or Microsoft.
+
+## For every other video source
+
+FrameBridge is a local x64 Windows application for previewing and interpolating external video. It supports local video files, UVC webcams and capture cards, desktop capture, a synthetic motion source, and the optional PS5 LAN prototype. Open **bin/FrameBridge.exe**, leave **Synthetic motion test** selected, then choose **Start processing**. The default is HUD-aware optical flow with automatic GPU selection. The Generation page also offers classic optical flow, a wide motion search preset and optional RIFE. The image in standby is a reference frame from the test generator.
 
 ## Try a real source
 
