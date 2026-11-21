@@ -1,6 +1,6 @@
 # FrameBridge
 
-Created by Faris Alsari / FMSGaming · Famous Gaming · version 0.1.0
+Created by Faris Alsari / FMSGaming · Famous Gaming · version 0.5.0
 
 ## GTA VI at a smoother presentation rate
 
