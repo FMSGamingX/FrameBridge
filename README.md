@@ -1,6 +1,6 @@
 # FrameBridge
 
-Created by Faris Alsari / FMSGaming · Famous Gaming · version 0.1.0
+Created by Faris Alsari / FMSGaming · Famous Gaming · version 0.5.0
 
 A local x64 Windows application for previewing and interpolating external video. Open **bin/FrameBridge.exe**, leave **Synthetic motion test** selected, then choose **Start processing**. The default is HUD-aware optical flow with automatic GPU selection. The Generation page also offers classic optical flow, a wide motion search preset and optional RIFE. The image in standby is a reference frame from the test generator.
 
